@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. 本番用の PostgreSQL (Vercel / Neon) 設定に切り替え
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // Vercelが自動生成するURL
+  directUrl = env("POSTGRES_URL_NON_POOLING") // 直結用URL
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  symptom       String?
+  isApproved    Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  
+  // リレーション
+  chats         Chat[]
+  matchRequests MatchRequest[]
+  reservations  Reservation[]
+  reviews       Review[]
+}
+
+model Therapist {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  specialty     String
+  experience    Int            @default(0)
+  message       String?        // AIで添削する自己紹介文
+  license       String?
+  photo         String?
+  lat           Float
+  lng           Float
+  walletBalance Int            @default(0)
+  rating        Float          @default(4.0)
+  price         Int            @default(5000)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // リレーション
+  chats         Chat[]
+  matchRequests MatchRequest[]
+  reservations  Reservation[]
+  reviews       Review[]
+}
+
+model Reservation {
+  id          String    @id @default(cuid())
+  userId      String
+  therapistId String
+  date        DateTime
+  price       Int
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  
+  therapist   Therapist @relation(fields: [therapistId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model Chat {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  therapistId String
+  message     String    // メッセージ本文
+  senderType  String    @default("USER") // "THERAPIST" または "USER" を識別
+  createdAt   DateTime  @default(now())
+  
+  therapist   Therapist @relation(fields: [therapistId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+model MatchRequest {
+  id          String    @id @default(cuid())
+  therapistId String
+  userId      String
+  status      String    @default("PENDING")
+  message     String?
+  createdAt   DateTime  @default(now())
+  
+  user        User      @relation(fields: [userId], references: [id])
+  therapist   Therapist @relation(fields: [therapistId], references: [id])
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  rating      Int       // 1〜5の評価
+  comment     String    // レビュー本文
+  userId      String
+  therapistId String
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  therapist   Therapist @relation(fields: [therapistId], references: [id])
+}

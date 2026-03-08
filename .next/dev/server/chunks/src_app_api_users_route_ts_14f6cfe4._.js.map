@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/shota/Desktop/pt-matching-app/src/app/api/users/route.ts"],"sourcesContent":["import { NextResponse } from \"next/server\";\nimport { PrismaClient } from \"../../../../prisma/generated/client\"; // 生成した場所に合わせて調整\n\nconst prisma = new PrismaClient();\n\nexport async function GET() {\n  try {\n    // 全ての利用者を、新しい順に取得\n    const users = await prisma.user.findMany({\n      orderBy: { createdAt: \"desc\" },\n    });\n\n    return NextResponse.json(users);\n  } catch (error) {\n    return NextResponse.json({ message: \"データ取得失敗\" }, { status: 500 });\n  }\n}"],"names":[],"mappings":";;;;AAAA;AACA,+OAAoE,gBAAgB;;;AAEpF,MAAM,SAAS,IAAI,wJAAY;AAExB,eAAe;IACpB,IAAI;QACF,kBAAkB;QAClB,MAAM,QAAQ,MAAM,OAAO,IAAI,CAAC,QAAQ,CAAC;YACvC,SAAS;gBAAE,WAAW;YAAO;QAC/B;QAEA,OAAO,gJAAY,CAAC,IAAI,CAAC;IAC3B,EAAE,OAAO,OAAO;QACd,OAAO,gJAAY,CAAC,IAAI,CAAC;YAAE,SAAS;QAAU,GAAG;YAAE,QAAQ;QAAI;IACjE;AACF"}}]
+}

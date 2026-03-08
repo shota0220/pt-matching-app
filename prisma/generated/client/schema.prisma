@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// 1. 利用者（患者）
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  symptom   String? // 悩み・症状
+  createdAt DateTime @default(now())
+
+  // リレーション
+  reservations  Reservation[]
+  chats         Chat[]
+  matchRequests MatchRequest[] // ★追加：PTからのマッチング申請を受け取る
+}
+
+// 2. 理学療法士（PT）
+model Therapist {
+  id         String  @id @default(cuid())
+  name       String
+  email      String  @unique
+  specialty  String // 専門（腰痛、膝など）
+  experience Int     @default(0)
+  bio        String?
+  license    String?
+  imageUrl   String?
+
+  // 地図・売上管理用
+  lat           Float
+  lng           Float
+  walletBalance Int   @default(0) // ★追加：ダッシュボード用（現在の報酬合計）
+
+  // リレーション
+  reservations  Reservation[]
+  chats         Chat[]
+  matchRequests MatchRequest[] // ★追加：自分から利用者へ送った申請
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// 3. 予約モデル
+model Reservation {
+  id          String   @id @default(cuid())
+  userId      String
+  therapistId String
+  date        DateTime
+  price       Int
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  therapist Therapist @relation(fields: [therapistId], references: [id])
+}
+
+// 4. チャットモデル
+model Chat {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  therapistId String
+  message     String
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  therapist Therapist @relation(fields: [therapistId], references: [id])
+}
+
+// ★ 5. マッチング申請（PTから利用者へ送る「スカウト」機能）
+model MatchRequest {
+  id          String   @id @default(cuid())
+  therapistId String
+  userId      String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  message     String? // 「私ならその膝の痛み、改善できます！」などのメッセージ
+  createdAt   DateTime @default(now())
+
+  therapist Therapist @relation(fields: [therapistId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+}

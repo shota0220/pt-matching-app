@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///Users/shota/Desktop/pt-matching-app/src/app/page.tsx"],"sourcesContent":["//TOPページ\nimport { redirect } from \"next/navigation\";\n\nexport default function HomePage() {\n    //アクセスしたら自動的に検索ページへリダイレクト\n    redirect(\"/search\");\n}"],"names":[],"mappings":";;;;AAAA,QAAQ;AACR;AAAA;;AAEe,SAAS;IACpB,yBAAyB;IACzB,IAAA,iMAAQ,EAAC;AACb"}}]
+}
