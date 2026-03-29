@@ -1,43 +1,53 @@
 //PTのスキルと利用者の症状一致したとき加算方式でマッチングさせる、位置情報も計算に含む
-import { PT, UserCondition } from "@/types/index";
+import { Therapist } from "@prisma/client";
+import { UserCondition } from "@/types";
+import { getTravelTime } from "./googleMaps";
+ 
+export const calculateMatchScore = async (
+  t: Therapist,
+  user: UserCondition,
+  userLat?: number,
+  userLng?: number
+): Promise<number> => {
+  let rawScore = 0;
 
-export const calculateMatchScore = ( 
-    pt: PT, 
-    user: UserCondition,
-    userLat?: number, // 追加：利用者の今の緯度
-    userLng?: number  // 追加：利用者の今の経度
-): number => {
-    let score = 0;
+  // ① 【専門性】症状との一致 (配点: 40点)
+  const userNeeds = `${user.symptom ?? ""}`.toLowerCase();
+  const specialty = t.specialty.toLowerCase();
 
-    // ① 既存ロジック：症状の一致（5点）
-    if (pt.skills.includes(user.symptom)) {
-        score += 5;
+  if (userNeeds.includes(specialty)) {
+    rawScore += 40;
+  } else {
+    const parts = specialty.split("・").map((s) => s.trim().toLowerCase());
+    if (parts.some((s) => s && userNeeds.includes(s))) {
+      rawScore += 25;
     }
+  }
 
-    // ② 既存ロジック：専門分野の一致（4点）
-    if (user.symptom === "膝の痛み" && pt.specialty === "運動器") {
-        score += 4;
-    }
+  // ② 【経験】経験年数 (配点: 20点)
+  const requiredExp = Number(user.targetExperience) || 0;
 
-    // ③ 既存ロジック：経験年数の一致（3点）
-    if (user.targetExperience === "5年以上" && pt.experienceYears >= 5) {
-        score += 3;
-    } else if (user.targetExperience === "3~5年" && pt.experienceYears >= 3 && pt.experienceYears < 5) {
-        score += 3;
-    }
+  if (t.experience >= requiredExp) {
+    rawScore += 20;
+  } else if (t.experience >= requiredExp - 2) {
+    rawScore += 10;
+  }
 
-    // ④ 【追加分】：距離による加点（5点満点）
-    // 解説：もし位置情報が取れていれば、距離を計算して近いほど加点します
-    if (userLat !== undefined && userLng !== undefined && pt.lat && pt.lng) {
-        const distance = Math.sqrt(
-            Math.pow(pt.lat - userLat, 2) + Math.pow(pt.lng - userLng, 2)
-        );
-        if (distance < 0.05) { // 約5km以内
-            score += 5;
-        } else if (distance < 0.1) { // 約10km以内
-            score += 2;
-        }
+  // ③ 【利便性】移動時間 (配点: 40点)
+  if (userLat !== undefined && userLng !== undefined) {
+    try {
+      const result = await getTravelTime(t.lat, t.lng, userLat, userLng);
+
+      if (result) {
+        if (result.duration <= 15) rawScore += 40;
+        else if (result.duration <= 30) rawScore += 25;
+        else if (result.duration <= 45) rawScore += 10;
+      }
+    } catch (error) {
+      console.error("Score calculation travel time error:", error);
     }
-    
-    return score;
+  }
+
+  return Math.min(rawScore, 100);
 };
+

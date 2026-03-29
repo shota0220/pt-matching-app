@@ -1,33 +1,40 @@
 // 利用者とPTのデータの型を定義
-// 利用者とPTのデータの型を定義
-export type PT = {
-    id: string;
-    name: string;
-    specialty: string;
-    experienceYears: number;
-    skills: string[];
-    photo: string;
-    message: string;
-    lat: number;   // 50人のデータに必須で含まれている
-    lng: number;   // 50人のデータに必須で含まれている
-    rating: number; 
-    price: number; 
-};
-
-export type UserCondition = {
-    symptom: string;
-    targetExperience: string;
-    // matchScore.ts で利用者の現在地を受け取るために追加
-    lat?: number;
-    lng?: number;
-};
 
 export const SPECIALTIES = [
-  "運動器",      // 50人のデータで使われている名前に合わせる
-  "神経系",      // 50人のデータで使われている名前に合わせる
-  "中枢神経",    // 50人のデータで使われている名前に合わせる
-  "呼吸器",      // 50人のデータで使われている名前に合わせる
-  "小児",        // 50人のデータで使われている名前に合わせる
-  "ウィメンズヘルス", 
-  "認知症予防"
-];
+  "腰痛・膝の痛み（運動器）",
+  "脳卒中・麻痺（中枢神経）",
+  "歩行困難・転倒予防",
+  "術後リハビリ・骨折",
+  "神経・パーキンソン病",
+  "産前産後・骨盤ケア",
+  "スポーツ障害・部活",
+  "認知症・認知機能ケア",
+] as const;
+
+export type Specialty = (typeof SPECIALTIES)[number];
+
+export type PT = {
+  id: string;
+  name: string;
+  specialty: Specialty;
+  experienceYears: number;
+  skills: string[];
+  photo: string;
+  message: string;
+  lat: number;
+  lng: number;
+  rating: number;
+  price: number;
+  matchScore?: number;
+  tags: string[];
+};
+
+
+export type UserCondition = {
+  symptom: string;
+  medicalHistory?: string;
+  targetExperience: string;
+  lat?: number;
+  lng?: number;
+};
+

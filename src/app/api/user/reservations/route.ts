@@ -1,19 +1,44 @@
-//予約データをDBから取得して表示するページ
-import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 
 export async function GET() {
-    try {
-        // user_1 の予約をセラピスト情報付きで取得
-        const reservations = await prisma.reservation.findMany({
-            where: { userId: "user_1" },
-            include: { therapist: true }, 
-            orderBy: { date: 'asc' }
-        });
-        return NextResponse.json(reservations);
-    } catch (error) {
-        return NextResponse.json({ error: "取得失敗" }, { status: 500 });
+  try {
+    // セッション取得
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    // ログイン中ユーザーの予約一覧を取得
+    const reservations = await prisma.reservation.findMany({
+      where: { userId: session.user.id },
+      include: {
+        therapist: {
+          select: {
+            id: true,
+            name: true,
+            specialty: true,
+            photo: true,
+            rating: true,
+          },
+        },
+      },
+      orderBy: { date: "asc" },
+    });
+
+    return NextResponse.json(reservations);
+  } catch (error) {
+    console.error("GET /api/user/reservations error:", error);
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
+  }
 }
+

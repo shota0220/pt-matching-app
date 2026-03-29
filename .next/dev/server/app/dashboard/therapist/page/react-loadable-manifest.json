@@ -1,0 +1,11 @@
+{
+  "[project]/src/components/VisitMap.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/src/components/VisitMap.tsx [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/node_modules_leaflet_dist_leaflet_ef5f0413.css",
+      "static/chunks/node_modules_react-leaflet_lib_index_0baa1c4e.js",
+      "static/chunks/src_components_VisitMap_tsx_f6924c65._.js",
+      "static/chunks/src_components_VisitMap_tsx_7116b949._.js"
+    ]
+  }
+}

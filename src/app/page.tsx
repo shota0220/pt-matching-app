@@ -1,77 +1,90 @@
-"use client";
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Search, ArrowRight, PlusCircle, User } from "lucide-react";
 
-const POPULAR_TAGS = ["腰痛", "膝の痛み", "スポーツ", "産後ケア", "脳卒中"];
-
-export default function HomePage() {
-  const [therapists, setTherapists] = useState([]);
-  const [activeTag, setActiveTag] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  // タグが切り替わるたびにデータを取得
-  useEffect(() => {
-    const fetchTherapists = async () => {
-      setLoading(true);
-      const url = activeTag ? `/api/therapists?tag=${activeTag}` : "/api/therapists";
-      const res = await fetch(url);
-      const data = await res.json();
-      setTherapists(data);
-      setLoading(false);
-    };
-    fetchTherapists();
-  }, [activeTag]);
+export default function StartPage() {
+  const router = useRouter();
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl font-black text-gray-900 mb-6">専門性を、選ぶ。</h1>
-        
-        {/* リッチなタグUI */}
-        <div className="flex flex-wrap justify-center gap-3">
-          <button 
-            onClick={() => setActiveTag("")}
-            className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${!activeTag ? "bg-black text-white" : "bg-gray-100 text-gray-500"}`}
-          >
-            すべて
-          </button>
-          {POPULAR_TAGS.map(tag => (
-            <button 
-              key={tag}
-              onClick={() => setActiveTag(tag)}
-              className={`px-6 py-2 rounded-full text-sm font-bold transition-all border ${activeTag === tag ? "bg-blue-600 border-blue-600 text-white shadow-lg" : "bg-white border-gray-100 text-gray-400 hover:border-blue-300"}`}
-            >
-              # {tag}
-            </button>
-          ))}
-        </div>
-      </header>
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-white to-slate-50">
 
-      {/* 検索結果一覧 */}
-      {loading ? (
-        <div className="text-center py-20 text-gray-300 font-bold">検索中...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {therapists.map(t => (
-            <div key={t.id} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 hover:scale-[1.02] transition-transform">
-               <div className="flex justify-between items-start mb-4">
-                 <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-black">
-                   {t.name[0]}
-                 </div>
-                 <span className="text-yellow-500 font-black text-sm">★ {t.rating}</span>
-               </div>
-               <h3 className="font-black text-gray-800 text-lg mb-1">{t.name}</h3>
-               <p className="text-xs font-bold text-blue-500 mb-4">{t.specialty}</p>
-               
-               {/* AIが自動生成したタグを表示 */}
-               <div className="flex flex-wrap gap-2">
-                 {t.tags?.split(',').map(tag => (
-                   <span key={tag} className="text-[10px] bg-gray-50 text-gray-400 px-2 py-1 rounded-md font-bold">#{tag}</span>
-                 ))}
-               </div>
-            </div>
-          ))}
+      <main className="w-full flex flex-col items-center py-16">
+
+        {/* メインタイトル（シンプル・医療系の信頼感） */}
+        <div className="text-center space-y-4 mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">
+            理学療法士をもっと身近に
+          </h1>
+          <p className="text-sm text-slate-500">
+            福岡で、自分に合った理学療法士を探して予約できるサービスです。
+          </p>
         </div>
-      )}
+
+        {/* 検索バー（シンプル版） */}
+        <div
+          className="max-w-xl mx-auto w-[90%] md:w-full p-3 bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center cursor-pointer hover:shadow-md transition-all"
+          onClick={() => router.push("/search")}
+        >
+          <div className="flex-1 text-left pl-4 pr-4 py-2">
+            <p className="text-xs text-slate-400 mb-1">理学療法士を検索</p>
+            <p className="text-sm font-medium text-slate-700">症状・専門分野から探す</p>
+          </div>
+          <div className="bg-blue-600 text-white p-3 rounded-xl shadow-sm">
+            <Search size={18} strokeWidth={2.5} />
+          </div>
+        </div>
+
+        {/* 2つの入口（患者 / セラピスト） */}
+        <div className="w-full max-w-4xl mt-20 grid grid-cols-1 md:grid-cols-2 gap-6 px-4">
+
+          {/* 患者向け */}
+          <div
+            onClick={() => router.push("/login")}
+            className="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+                <User size={22} className="text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">利用者の方へ</h2>
+                <p className="text-xs text-slate-500 mt-1">理学療法士を探して予約できます</p>
+              </div>
+            </div>
+            <div className="mt-6 flex items-center text-sm text-blue-600 font-medium">
+              はじめる <ArrowRight size={14} className="ml-1" />
+            </div>
+          </div>
+
+          {/* セラピスト向け */}
+          <div
+            onClick={() => router.push("/register/therapist")}
+            className="group bg-white border border-slate-200 p-6 rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center">
+                <PlusCircle size={22} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">理学療法士の方へ</h2>
+                <p className="text-xs text-slate-500 mt-1">登録して利用者とつながれます</p>
+              </div>
+            </div>
+            <div className="mt-6 flex items-center text-sm text-slate-600 font-medium group-hover:text-blue-600">
+              はじめる <ArrowRight size={14} className="ml-1" />
+            </div>
+          </div>
+
+        </div>
+
+        {/* フッターテキスト（控えめ） */}
+        <div className="mt-16 opacity-60">
+          <p className="text-[10px] text-slate-400 tracking-widest">
+            Fukuoka Rehabilitation Matching
+          </p>
+        </div>
+
+      </main>
     </div>
   );
 }
+

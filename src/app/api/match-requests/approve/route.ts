@@ -1,39 +1,64 @@
+//マッチングが成立し、理学療法士の報酬が更新されるモデル
 import { NextResponse } from "next/server";
-// ★ 修正1: インポート元を @prisma/client から「生成した場所」に変更
-import { PrismaClient } from "@prisma/client";
-
-// ★ 修正2: インスタンス作成時に型をしっかり紐付ける
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { requestId } = body;
+    const { requestId } = await request.json();
 
-    // 1. 申請を「承認」に更新
-    // 型が生成先から読み込まれていれば、as any なしで matchRequest が認識されます
-    const updatedRequest = await (prisma as any).matchRequest.update({
-      where: { id: requestId },
-      data: { status: "APPROVED" },
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. 申請を承認
+      const updatedRequest = await tx.matchRequest.update({
+        where: { id: requestId },
+        data: { status: "APPROVED" },
+      });
+
+      // 2. 報酬 +5000
+      const updatedTherapist = await tx.therapist.update({
+        where: { id: updatedRequest.therapistId },
+        data: {
+          walletBalance: {
+            increment: 5000,
+          },
+        },
+      });
+
+      // 3. チャットルームが既にあるか確認
+      const existingChat = await tx.chat.findFirst({
+        where: {
+          userId: updatedRequest.userId,
+          therapistId: updatedRequest.therapistId,
+        },
+      });
+
+      // 4. なければ作成
+      let chatRoom = existingChat;
+      if (!chatRoom) {
+        chatRoom = await tx.chat.create({
+          data: {
+            userId: updatedRequest.userId,
+            therapistId: updatedRequest.therapistId,
+            message: "マッチングが成立しました。チャットを開始できます。",
+            sender: "SYSTEM",
+          },
+        });
+      }
+
+      return { updatedRequest, updatedTherapist, chatRoom };
     });
 
-    // 2. 理学療法士の報酬をプラス
-    // これも walletBalance が認識されるようになります
-    await (prisma as any).therapist.update({
-      where: { id: updatedRequest.therapistId },
-      data: { 
-        walletBalance: { 
-          increment: 5000 
-        } 
-      },
+    return NextResponse.json({
+      message: "マッチング成立！チャットルームを作成しました。",
+      chatRoomId: result.chatRoom.id,
+      newBalance: result.updatedTherapist.walletBalance,
     });
-
-    return NextResponse.json({ message: "マッチング成立！" });
   } catch (error: any) {
     console.error("承認エラー詳細:", error);
     return NextResponse.json(
-      { message: "エラーが発生しました", detail: error.message }, 
+      { message: "承認処理に失敗しました", detail: error.message },
       { status: 500 }
     );
   }
 }
+
+

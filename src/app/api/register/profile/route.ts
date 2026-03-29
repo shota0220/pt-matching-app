@@ -1,36 +1,78 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
   try {
+    // 1. セッション確認（therapist のみ許可）
+    const session = await getServerSession(authOptions);
+
+    if (!session || (session.user as any).role !== "THERAPIST") {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+    }
+
+    const email = session.user?.email as string;
+
     const body = await req.json();
     const { specialty, experience, message, lat, lng } = body;
 
-    // 1. バリデーション（最低限のチェック）
-    if (!specialty || !experience) {
-      return NextResponse.json({ error: "必須項目が不足しています" }, { status: 400 });
+    // 2. バリデーション
+    if (!specialty || experience === undefined) {
+      return NextResponse.json(
+        { error: "専門分野と経験年数は必須です" },
+        { status: 400 }
+      );
     }
 
-    // 2. データベースへ保存
-    // 本来はログイン中のユーザーID（Session）を使いますが、
-    // まずは「新規作成」として動かします。メールアドレスはユニークなものを仮生成します。
-    const newTherapist = await prisma.therapist.create({
+    // 3. 既存の therapist を取得（初回登録かどうか判定）
+    const existing = await prisma.therapist.findUnique({
+      where: { email },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "セラピスト情報が見つかりません" },
+        { status: 404 }
+      );
+    }
+
+    const isFirstProfile = !existing.specialty || existing.experience === 0;
+
+    // 4. 更新処理
+    const updatedTherapist = await prisma.therapist.update({
+      where: { email },
       data: {
-        name: "新規登録セラピスト", // 本来はログイン画面の名前を引き継ぐ
-        email: `new_pt_${Date.now()}@example.com`,
         specialty,
         experience: Number(experience),
-        message,
-        lat: parseFloat(lat),
-        lng: parseFloat(lng),
-        rating: 5.0, // 新規登録時は満点からスタート！
-        price: 6000,  // デフォルト料金
+        message: message || "",
+        lat: lat ?? 33.5897,
+        lng: lng ?? 130.4207,
+
+        // 初回プロフィール登録時のみ初期値をセット
+        ...(isFirstProfile && {
+          rating: 5.0,
+          price: 6000,
+        }),
       },
     });
 
-    return NextResponse.json({ message: "プロフィールを登録しました", data: newTherapist });
-  } catch (error) {
+    return NextResponse.json({
+      message: "プロフィールを更新しました",
+      data: updatedTherapist,
+    });
+
+  } catch (error: any) {
     console.error("Profile Registration Error:", error);
-    return NextResponse.json({ error: "サーバーエラーが発生しました" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "プロフィール更新中にエラーが発生しました",
+        detail: error.message,
+      },
+      { status: 500 }
+    );
   }
 }
+
+
+

@@ -1,8 +1,24 @@
 //経験と評価を「円」に変換する関数
-export const calculatePrice = (experienceYears: number, rating: number): number => {
-  const basePrice = 5000; // 基本料金
-  const experienceAdd = experienceYears * 200; // 1年につき200円アップ
-  const ratingAdd = Math.round(rating * 500);  // 星1つにつき500円アップ
-  
-  return basePrice + experienceAdd + ratingAdd;
+/**
+ * セラピストの市場価値に基づいた推奨施術料金を算出するロジック
+ */
+
+export const calculatePrice = (
+  experienceYears: number,
+  rating: number,
+  isSpecialist: boolean = false
+): number => {
+  const BASE_PRICE = 6000; // 基本料金
+
+  const cappedExp = Math.max(0, Math.min(experienceYears, 20));
+  const experienceAdd = cappedExp * 300;
+
+  const safeRating = Math.max(0, Math.min(rating, 5));
+  const ratingAdd = Math.round(safeRating * 600);
+
+  const specialistAdd = isSpecialist ? 1500 : 0;
+
+  const totalPrice = BASE_PRICE + experienceAdd + ratingAdd + specialistAdd;
+
+  return Math.ceil(totalPrice / 100) * 100;
 };

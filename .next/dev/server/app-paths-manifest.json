@@ -1,1 +1,14 @@
-{}
+{
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/chats/list/route": "app/api/chats/list/route.js",
+  "/api/match-requests/route": "app/api/match-requests/route.js",
+  "/api/register/profile/route": "app/api/register/profile/route.js",
+  "/api/register/therapist/route": "app/api/register/therapist/route.js",
+  "/api/users/route": "app/api/users/route.js",
+  "/chat/list/page": "app/chat/list/page.js",
+  "/dashboard/therapist/page": "app/dashboard/therapist/page.js",
+  "/dashboard/therapist/search/page": "app/dashboard/therapist/search/page.js",
+  "/page": "app/page.js",
+  "/register/therapist/page": "app/register/therapist/page.js",
+  "/register/therapist/profile/page": "app/register/therapist/profile/page.js"
+}

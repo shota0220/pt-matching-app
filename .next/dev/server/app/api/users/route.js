@@ -1,11 +1,6 @@
 var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/users/route.js")
-R.c("server/chunks/[externals]_node:crypto_e8127bbd._.js")
-R.c("server/chunks/prisma_generated_client_runtime_client_a5149867.js")
-R.c("server/chunks/prisma_generated_client_query_compiler_fast_bg_wasm-base64_75f169ab.js")
-R.c("server/chunks/prisma_generated_client_d18b52fd._.js")
-R.c("server/chunks/src_app_api_users_route_ts_14f6cfe4._.js")
-R.c("server/chunks/[externals]__525f01c2._.js")
-R.c("server/chunks/node_modules_36eac80b._.js")
+R.c("server/chunks/[root-of-the-server]__36d1413c._.js")
+R.c("server/chunks/[root-of-the-server]__7b8b8d5e._.js")
 R.c("server/chunks/_next-internal_server_app_api_users_route_actions_4b9121e3.js")
 R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/src/app/api/users/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)")
 module.exports=R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/src/app/api/users/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)").exports

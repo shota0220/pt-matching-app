@@ -3,110 +3,145 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { z } from "zod";
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 
-// バリデーション設定
 const loginSchema = z.object({
   email: z.string().email({ message: "メールアドレスの形式が正しくありません" }),
   password: z.string().min(6, { message: "パスワードは6文字以上で入力してください" }),
 });
 
 export default function LoginPage() {
-    const router = useRouter(); 
-    const [screenType, setScreenType] = useState(0); // 0:選択, 1:利用者, 2:PT
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    // ログイン処理（既存ユーザー向け）
-    const handleLogin = (role: "user" | "pt") => {
-        const result = loginSchema.safeParse({ email, password });
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
 
-        if (!result.success) {
-            const fieldErrors = result.error.flatten().fieldErrors;
-            alert(fieldErrors.email?.[0] || fieldErrors.password?.[0] || "入力内容に誤りがあります");
-            return;
-        }
-
-        // ログイン後はそれぞれのメイン画面へ
-        if (role === "user") {
-            router.push("/search"); // 患者さんは検索トップへ
-        } else {
-            router.push("/results"); // PTは自分の掲載を確認できるよう結果一覧へ（またはマイページ）
-        }
-    };
-
-    // ★新規登録処理（理学療法士が「初めて」使う時）
-    const handleStartRegistration = () => {
-        const result = loginSchema.safeParse({ email, password });
-        if (!result.success) {
-            alert("まずはメールアドレスとパスワードを正しく入力してください");
-            return;
-        }
-        // アカウント作成の第一歩として、詳細プロフィール入力画面へ飛ばす
-        // 本来はここでAPIを叩いてUserを作成しますが、まずは画面を繋ぎます
-        router.push("/register/profile");
-    };
-
-    const containerStyle = { padding: "40px 20px", maxWidth: "400px", margin: "0 auto", fontFamily: "sans-serif" };
-    const inputStyle = { padding: "12px", width: "100%", boxSizing: "border-box" as const, borderRadius: "8px", border: "1px solid #ddd", marginTop: "5px" };
-    const buttonStyle = (color: string, outline = false) => ({ 
-        marginTop: "15px", 
-        padding: "15px", 
-        width: "100%", 
-        backgroundColor: outline ? "white" : color, 
-        color: outline ? color : "white", 
-        border: outline ? `2px solid ${color}` : "none", 
-        borderRadius: "8px", 
-        cursor: "pointer", 
-        fontWeight: "bold" as const 
-    });
-
-    // 最初の役割選択画面
-    if (screenType === 0) {
-        return (
-            <div style={{ ...containerStyle, textAlign: "center", marginTop: "10vh" }}>
-                <h1 style={{ color: "#0070f3", marginBottom: "10px" }}>リハヒカリ</h1>
-                <p style={{ color: "#666", marginBottom: "40px" }}>あなたにぴったりのリハビリを、すぐそばに。</p>
-                <h2 style={{ fontSize: "18px", marginBottom: "20px" }}>どちらで利用しますか？</h2>
-                <button onClick={() => setScreenType(1)} style={buttonStyle("#0070f3")}>利用者（患者様）として</button>
-                <button onClick={() => setScreenType(2)} style={buttonStyle("#28a745")}>理学療法士として</button>
-            </div>
-        );
+    const result = loginSchema.safeParse({ email, password });
+    if (!result.success) {
+      setError(
+        result.error.flatten().fieldErrors.email?.[0] ||
+          result.error.flatten().fieldErrors.password?.[0] ||
+          "入力内容を確認してください"
+      );
+      return;
     }
 
-    // フォーム画面
-    return (
-        <div style={containerStyle}>
-            <button onClick={() => setScreenType(0)} style={{ background: "none", border: "none", color: "#666", cursor: "pointer", marginBottom: "20px" }}>← 戻る</button>
-            <h2 style={{ marginBottom: "25px" }}>{screenType === 1 ? "利用者" : "理学療法士"}モード</h2>
-            
-            <div style={{ marginBottom: "20px" }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold" }}>メールアドレス</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} placeholder="example@mail.com" />
-            </div>
-            
-            <div style={{ marginBottom: "20px" }}>
-                <label style={{ fontSize: "14px", fontWeight: "bold" }}>パスワード</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} placeholder="6文字以上" />
-            </div>
+    setIsLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-            <button 
-                onClick={() => handleLogin(screenType === 1 ? "user" : "pt")}
-                style={buttonStyle(screenType === 1 ? "#0070f3" : "#28a745")}>
-                ログイン
-            </button>
+      if (res?.error) {
+        setError("メールアドレスまたはパスワードが正しくありません。");
+        return;
+      }
 
-            {/* 理学療法士の場合のみ「新規登録」ボタンを表示 */}
-            {screenType === 2 && (
-                <div style={{ marginTop: "40px", textAlign: "center", borderTop: "1px solid #eee", paddingTop: "20px" }}>
-                    <p style={{ fontSize: "13px", color: "#666" }}>まだアカウントをお持ちでない方</p>
-                    <button 
-                        onClick={handleStartRegistration}
-                        style={buttonStyle("#28a745", true)}>
-                        新しく理学療法士として登録する
-                    </button>
-                </div>
-            )}
+      // ログイン成功 → ダッシュボードへ
+      router.push("/dashboard/therapist");
+      router.refresh();
+
+    } catch {
+      setError("ネットワークエラーが発生しました。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 bg-white">
+      <div className="w-full max-w-[420px]">
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-2xl font-bold text-slate-900">ログイン</h1>
+          <p className="text-sm text-slate-500 mt-2">
+            登録したメールアドレスとパスワードを入力してください。
+          </p>
         </div>
-    );
+
+        {/* Error */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 text-red-700">
+            <AlertCircle size={18} />
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={onSubmit} className="space-y-6 bg-white p-6 border border-slate-200 rounded-lg shadow-sm">
+          {/* Email */}
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">メールアドレス</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-2">
+            <label className="text-sm text-slate-700">パスワード</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="password"
+                placeholder="********"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {isLoading ? <Loader2 className="animate-spin w-4 h-4" /> : "ログイン"}
+          </button>
+        </form>
+
+        {/* Register */}
+        <div className="mt-8 text-center space-y-3">
+          <p className="text-sm text-slate-600">アカウントをお持ちでない方</p>
+
+          <button
+            onClick={() => router.push("/register/user")}
+            className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-md text-sm hover:bg-slate-50 transition"
+          >
+            一般利用者として登録
+          </button>
+
+          <button
+            onClick={() => router.push("/register/therapist")}
+            className="w-full py-3 bg-white border border-slate-200 text-slate-700 rounded-md text-sm hover:bg-slate-50 transition"
+          >
+            理学療法士として登録
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
+
+
+
+

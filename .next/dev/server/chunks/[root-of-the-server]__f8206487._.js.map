@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 46, "column": 0}, "map": {"version":3,"sources":["file:///Users/shota/Desktop/pt-matching-app/src/app/api/chats/list/route.ts"],"sourcesContent":["//承認済みチャット一覧 API\nimport { NextResponse } from \"next/server\";\nimport { PrismaClient } from \"@prisma/client\";\n\nconst prisma = new PrismaClient();\n\nexport async function GET(request: Request) {\n  // 本来はログイン中のPTのIDを使いますが、デモ用に全承認済みマッチを取得\n  try {\n    const approvedMatches = await (prisma as any).matchRequest.findMany({\n      where: { status: \"APPROVED\" },\n      include: { user: true } // 利用者の名前や悩みも一緒に持ってくる\n    });\n    return NextResponse.json(approvedMatches);\n  } catch (error) {\n    return NextResponse.json({ message: \"取得失敗\" }, { status: 500 });\n  }\n}"],"names":[],"mappings":";;;;AAAA,gBAAgB;AAChB;AACA;;;AAEA,MAAM,SAAS,IAAI,sMAAY;AAExB,eAAe,IAAI,OAAgB;IACxC,uCAAuC;IACvC,IAAI;QACF,MAAM,kBAAkB,MAAM,AAAC,OAAe,YAAY,CAAC,QAAQ,CAAC;YAClE,OAAO;gBAAE,QAAQ;YAAW;YAC5B,SAAS;gBAAE,MAAM;YAAK,EAAE,qBAAqB;QAC/C;QACA,OAAO,gJAAY,CAAC,IAAI,CAAC;IAC3B,EAAE,OAAO,OAAO;QACd,OAAO,gJAAY,CAAC,IAAI,CAAC;YAAE,SAAS;QAAO,GAAG;YAAE,QAAQ;QAAI;IAC9D;AACF"}}]
-}

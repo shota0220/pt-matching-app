@@ -1,28 +1,87 @@
 //SOAP自動生成：バックエンドロジック
-//チャット要約（背景）と当日のメモ（実施内容）を組み合わせて、医療基準に沿ったSOAP形式へ変換して保存する機能
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(request: Request) {
-  const { summary, sessionMemo } = await request.json();
+  try {
+    const session = await getServerSession(authOptions);
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // より賢いProモデルを推奨
-  const prompt = `
-    理学療法士の記録（SOAP形式）を作成してください。
-    【背景（チャット要約）】: ${summary}
-    【当日のメモ（音声入力等）】: ${sessionMemo}
+    // セラピスト判定（role ではなく DB で判定）
+    const therapist = await prisma.therapist.findUnique({
+      where: { email: session?.user?.email || "" },
+    });
 
-    以下の形式で出力してください：
-    S (Subjective): 患者の主訴・発言
-    O (Objective): 客観的所見・実施した訓練・数値
-    A (Assessment): 分析・改善の兆し・課題
-    P (Plan): 次回の指針
+    if (!therapist) {
+      return NextResponse.json(
+        { error: "セラピストのみがSOAPを作成できます" },
+        { status: 403 }
+      );
+    }
 
-    専門用語を用いつつ、簡潔でプロフェッショナルな表現にしてください。
-  `;
+    const { userId, summary, sessionMemo } = await request.json();
 
-  const result = await model.generateContent(prompt);
-  return NextResponse.json({ soap: result.response.text() });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+    const prompt = `
+      あなたは熟練の理学療法士です。以下の情報を統合し、臨床的に価値の高いSOAP形式の記録を作成してください。
+
+      【入力情報】
+      1. 患者の訴えとチャット履歴の要約: ${summary}
+      2. 当日の理学療法実施内容・メモ: ${sessionMemo}
+
+      【出力ルール】
+      - 専門的な医学用語を適切に使用すること。
+      - Assessment(A)では臨床的推論を行うこと。
+      - 出力は必ず以下のJSON形式のみ。
+
+      {
+        "s": "",
+        "o": "",
+        "a": "",
+        "p": ""
+      }
+    `;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AIが有効なJSONを生成できませんでした");
+
+    const soapData = JSON.parse(jsonMatch[0]);
+
+    const record = await prisma.clinicalRecord.create({
+      data: {
+        userId,
+        therapistId: therapist.id,
+        subjective: soapData.s,
+        objective: soapData.o,
+        assessment: soapData.a,
+        plan: soapData.p,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "SOAP記録の生成と保存が完了しました",
+      record,
+    });
+
+  } catch (error: any) {
+    console.error("Clinical AI API Error:", error);
+    return NextResponse.json(
+      {
+        error: "AIによる解析中にエラーが発生しました",
+        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      },
+      { status: 500 }
+    );
+  }
 }
+
+

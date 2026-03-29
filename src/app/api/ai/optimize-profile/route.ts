@@ -2,16 +2,14 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// 環境変数からキーを読み込む
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(request: Request) {
     try {
         const { type, text, context } = await request.json();
 
-        // APIキーがない場合のガード
         if (!process.env.GEMINI_API_KEY) {
-            return NextResponse.json({ error: "APIキーが設定されていません" }, { status: 500 });
+            return NextResponse.json({ error: "APIキー未設定" }, { status: 500 });
         }
 
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -19,29 +17,33 @@ export async function POST(request: Request) {
         let prompt = "";
         if (type === "suggest_reply") {
             prompt = `
-                あなたはプロの理学療法士の助手です。
-                利用者からのメッセージ: "${text}"
-                状況: ${context}
+                理学療法士のチャットアシスタントとして、患者さんへの返信を3つ提案してください。
+                【状況】: ${context}
+                【届いたメッセージ】: "${text}"
                 
-                上記に対して、セラピストが送るべき適切な返信案を3つ提案してください。
                 条件：
-                1. 丁寧かつ親しみやすい表現
-                2. 専門性を感じさせつつ分かりやすい
-                3. 返信案のみを "---" という記号で区切って出力してください。余計な解説は不要です。
+                - 1. 共感的、2. 専門的、3. 次のアクション（予約等）を促す、の3パターンを作成。
+                - 解説は不要。返信案のみを "@@@" で区切って出力してください。
             `;
         } else if (type === "optimize_profile") {
             prompt = `
-                以下の理学療法士の自己紹介文を、患者さんに信頼感と安心感を与える魅力的な文章にリライトしてください。
-                【リライトの指針】
-                - 専門性を保ちつつ、難しい言葉を避け、患者さんの悩みに寄り添うトーンにする
-                - 文末はですます調で統一
-                原文: "${text}"
+                理学療法士としての自己紹介文を、患者さんに信頼感を与える文章にリライトしてください。
+                【専門分野】: ${context}
+                【原文】: "${text}"
+                指針：
+                - 「寄り添う姿勢」と「具体的な改善イメージ」を強調。
+                - 専門用語を分かりやすく噛み砕く。
             `;
         }
 
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const output = response.text();
+        let output = result.response.text();
+
+        // 返信案の場合は配列にして返すと、フロントエンドでの .map() が楽になります
+        if (type === "suggest_reply") {
+            const suggestions = output.split("@@@").map(s => s.trim()).filter(s => s !== "");
+            return NextResponse.json({ suggestions });
+        }
 
         return NextResponse.json({ result: output });
 
@@ -50,3 +52,4 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "AI処理中にエラーが発生しました" }, { status: 500 });
     }
 }
+
